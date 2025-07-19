@@ -1,0 +1,93 @@
+# Ubuntu 命令大全脚本 - 优化建议
+
+## 1. 性能优化
+
+### 执行命令优化
+- 添加超时控制：使用 timeout 命令
+- 精确计时：使用 date +%s.%N 和 bc 计算
+- 命令缓存：对于耗时且结果稳定的命令进行缓存
+
+### 代码示例：
+```bash
+# 优化前
+execute_command() {
+    eval $1
+    echo "完成"
+}
+
+# 优化后
+execute_command() {
+    local cmd="$1"
+    local start=$(date +%s.%N)
+    timeout 30 bash -c "$cmd"
+    local exit_code=$?
+    local duration=$(echo "$(date +%s.%N) - $start" | bc)
+    echo "完成 (耗时: ${duration}秒, 退出码: $exit_code)"
+}
+```
+
+## 2. 安全性增强
+
+### 危险命令检测
+```bash
+dangerous_patterns=("rm -rf" "dd if=" "mkfs" "fdisk")
+for pattern in "${dangerous_patterns[@]}"; do
+    if [[ "$cmd" == *"$pattern"* ]]; then
+        echo "警告：危险命令！"
+        read -p "确认执行? (y/N): " confirm
+        [[ "$confirm" != "y" ]] && return 1
+    fi
+done
+```
+
+## 3. 用户体验
+
+### 改进的菜单显示
+- 使用颜色和图标
+- 显示系统状态
+- 两列布局节省空间
+
+### 输入验证
+```bash
+validate_input() {
+    case "$2" in
+        "number") [[ "$1" =~ ^[0-9]+$ ]] ;;
+        "path") [[ -e "${1/#\~/$HOME}" ]] ;;
+    esac
+}
+```
+
+## 4. 日志和历史
+
+### 完整的日志系统
+```bash
+log() {
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] [$1] $2" >> "$LOG_FILE"
+}
+```
+
+### 命令历史记录
+```bash
+echo "[$(date '+%Y-%m-%d %H:%M:%S')] $cmd" >> "$HISTORY_FILE"
+```
+
+## 5. 错误处理
+
+### 使用 trap 捕获错误
+```bash
+set -euo pipefail
+trap 'echo "错误: 第$LINENO行"' ERR
+```
+
+## 6. 模块化设计
+
+- 将通用函数分离到独立文件
+- 使用配置文件存储设置
+- 支持插件扩展
+
+## 7. 其他优化
+
+- 使用关联数组替代多个 if 语句
+- 避免不必要的子 shell
+- 合理使用后台任务
+- 实现进度条和加载动画
